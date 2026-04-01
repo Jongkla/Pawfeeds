@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PawFeeds Dashboard</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        
+        :root {
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .modal-enter {
+            animation: modalEnter 0.3s ease-out forwards;
+        }
+
+        @keyframes modalEnter {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        [data-lucide] {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-[#F8F7FF] text-[#2D3436] min-h-screen">
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-md p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden modal-enter">
+            <div id="login-bg" class="absolute inset-0 w-full h-full object-cover opacity-10 pointer-events-none bg-[url('https://picsum.photos/seed/pawfeeds-login/800/600')]"></div>
+            <div class="relative z-10">
+                <div class="text-center mb-8">
+                    <div class="inline-flex p-4 bg-[#9D8DF1] rounded-3xl mb-4">
+                        <i data-lucide="dog" class="text-white w-8 h-8"></i>
+                    </div>
+                    <h2 class="text-3xl font-black text-[#6A59CC]">PawFeeds!</h2>
+                    <p class="text-sm text-[#7F8C8D] font-bold">Smart Feeding Network Access</p>
+                </div>
+
+                <div id="auth-viewer-content" class="space-y-4">
+                    <p class="text-center text-[#7F8C8D] text-sm">You are entering as a public viewer. You can monitor data but cannot perform admin actions.</p>
+                    <button onclick="enterAsViewer()" class="w-full py-6 bg-[#4ECDC4] text-white rounded-2xl font-black shadow-2xl shadow-[#4ECDC4]/40 text-xl hover:scale-[1.05] active:scale-[0.98] transition-all border-4 border-white/20">
+                        Enter as a Public Viewer
+                    </button>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="setAuthMode('login')" class="py-4 bg-[#6A59CC]/10 text-[#6A59CC] rounded-2xl font-black text-sm border-2 border-[#6A59CC]/20 hover:bg-[#6A59CC]/20 transition-all">Admin Login</button>
+                        <button onclick="setAuthMode('signup')" id="signup-prompt-btn" class="py-4 bg-[#9D8DF1]/10 text-[#9D8DF1] rounded-2xl font-black text-sm border-2 border-[#9D8DF1]/20 hover:bg-[#9D8DF1]/20 transition-all">New Admin? Sign UP</button>
+                    </div>
+                </div>
+
+                <form id="auth-form" class="hidden space-y-4" onsubmit="handleAuth(event)">
+                    <div class="flex gap-2 mb-4">
+                        <button type="button" onclick="setAuthMode('viewer')" class="flex-1 py-3 bg-[#4ECDC4]/10 text-[#4ECDC4] rounded-xl font-black text-xs border-2 border-[#4ECDC4]/40 hover:bg-[#4ECDC4]/20 transition-all">Viewer Mode</button>
+                        <button type="button" id="toggle-auth-mode" onclick="toggleAuthMode()" class="flex-1 py-3 bg-[#6A59CC]/10 text-[#6A59CC] rounded-xl font-black text-xs border-2 border-[#6A59CC]/40 hover:bg-[#6A59CC]/20 transition-all">Sign Up</button>
+                    </div>
+                    
+                    <div class="relative flex items-center gap-4 my-6">
+                        <div class="flex-1 h-px bg-[#EEEEEE]"></div>
+                        <span id="auth-title" class="text-[10px] font-bold text-[#7F8C8D] uppercase tracking-widest">Admin Login</span>
+                        <div class="flex-1 h-px bg-[#EEEEEE]"></div>
+                    </div>
+
+                    <div id="signup-fields" class="hidden">
+                        <input type="text" id="auth-name" placeholder="Full Name" class="w-full px-6 py-4 rounded-2xl border border-[#EEEEEE] bg-[#F8F7FF] outline-none focus:ring-2 focus:ring-[#9D8DF1] transition-all mb-4">
+                    </div>
+                    <input type="text" id="auth-username" placeholder="Username" required class="w-full px-6 py-4 rounded-2xl border border-[#EEEEEE] bg-[#F8F7FF] outline-none focus:ring-2 focus:ring-[#9D8DF1] transition-all">
+                    <input type="password" id="auth-password" placeholder="Password" required class="w-full px-6 py-4 rounded-2xl border border-[#EEEEEE] bg-[#F8F7FF] outline-none focus:ring-2 focus:ring-[#9D8DF1] transition-all">
+                    
+                    <button type="submit" id="auth-submit-btn" class="w-full py-4 bg-[#6A59CC] text-white rounded-2xl font-bold shadow-lg shadow-[#6A59CC]/30">Login</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Content (Hidden until auth) -->
+    <div id="app-content" class="hidden">
+        <!-- Top Bar -->
+        <header class="sticky top-0 z-50 border-b px-6 py-4 flex justify-between items-center shadow-sm backdrop-blur-md bg-white/80 border-[#EEEEEE]">
+            <div class="flex items-center gap-3">
+                <div class="bg-[#9D8DF1] p-2 rounded-xl">
+                    <i data-lucide="layout-dashboard" class="text-white w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold text-[#6A59CC] tracking-tight">PawFeeds</h1>
+                    <p class="text-[10px] text-[#7F8C8D] font-semibold uppercase tracking-widest">Smart Feeding Network</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div id="connection-status" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border transition-all bg-emerald-50 text-emerald-600 border-emerald-200">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    LIVE
+                </div>
+                
+                <div class="relative">
+                    <button onclick="toggleMenu()" class="p-2 rounded-xl hover:bg-[#F8F7FF] transition-colors">
+                        <i data-lucide="more-vertical" class="w-6 h-6"></i>
+                    </button>
+                    
+                    <div id="user-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl z-50 border border-[#EEEEEE] overflow-hidden">
+                        <div class="p-4 border-b border-[#EEEEEE]">
+                            <p class="text-xs font-bold text-[#7F8C8D]">Logged in as</p>
+                            <p id="menu-user-name" class="font-bold text-sm truncate">User</p>
+                        </div>
+                        <div class="p-2">
+                            <div id="admin-menu-items">
+                                <button onclick="openModal('profile')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#F8F7FF] transition-colors text-sm font-bold">
+                                    <i data-lucide="user" class="w-4 h-4"></i> My Profile
+                                </button>
+                                <button id="requests-btn" onclick="openModal('requests')" class="hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#F8F7FF] transition-colors text-sm font-bold">
+                                    <i data-lucide="shield-check" class="w-4 h-4"></i> Admin Requests
+                                </button>
+                                <button onclick="openModal('report')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#F8F7FF] transition-colors text-sm font-bold">
+                                    <i data-lucide="file-text" class="w-4 h-4"></i> Revenue Report
+                                </button>
+                                <button onclick="openModal('history')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#F8F7FF] transition-colors text-sm font-bold">
+                                    <i data-lucide="history" class="w-4 h-4"></i> Login History
+                                </button>
+                            </div>
+                            <button onclick="toggleDarkMode()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#F8F7FF] transition-colors text-sm font-bold">
+                                <i id="dark-mode-icon" data-lucide="moon" class="w-4 h-4"></i> <span id="dark-mode-text">Dark Mode</span>
+                            </button>
+                            <hr class="my-2 border-[#EEEEEE]">
+                            <button onclick="signOut()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#F8F7FF] transition-colors text-sm font-bold text-rose-500">
+                                <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto p-6 space-y-8">
+            <!-- Hero Section -->
+            <section class="bg-white rounded-3xl border border-[#EEEEEE] shadow-sm relative overflow-hidden">
+                <div class="h-48 w-full relative group/banner">
+                    <img id="hero-banner" src="https://picsum.photos/seed/pawfeeds-banner/1200/400" alt="Banner" class="w-full h-full object-cover opacity-50">
+                    <div class="absolute inset-0 bg-black/10"></div>
+                </div>
+                
+                <div class="px-8 pb-8 relative z-10">
+                    <div class="flex flex-col md:flex-row items-start md:items-end gap-6 -mt-12 mb-8">
+                        <div class="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl border-4 border-white shrink-0">
+                            <img id="hero-logo" src="https://picsum.photos/seed/pawfeeds-logo/200/200" alt="Logo" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 pt-4 md:pt-0">
+                            <h2 class="text-3xl md:text-4xl font-black mb-1 tracking-tight leading-tight">
+                                <span id="welcome-header">Welcome back,</span> <span id="display-user-name" class="text-[#6A59CC]">User</span>! 🐾
+                            </h2>
+                            <p id="system-status" class="text-[10px] text-[#7F8C8D] font-bold uppercase tracking-[0.2em]">System Status: Operational</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                        <div class="lg:col-span-2">
+                            <p id="welcome-subtitle" class="text-lg leading-relaxed font-medium text-[#7F8C8D]">
+                                Monitoring the stray feeding network in real-time. Each coin inserted dispenses 2 grams of high-quality pet food. Our automated systems ensure no stray goes hungry in your community.
+                            </p>
+                        </div>
+                        
+                        <div class="flex flex-col sm:flex-row lg:flex-col gap-4">
+                            <div class="flex-1 p-4 rounded-2xl bg-[#6A59CC]/5 border border-[#6A59CC]/10">
+                                <h4 class="text-[10px] font-black uppercase tracking-widest text-[#6A59CC] mb-1">Our Mission</h4>
+                                <p id="mission-text" class="text-[10px] text-[#7F8C8D] leading-relaxed">To provide accessible and automated feeding solutions for stray animals through smart technology.</p>
+                            </div>
+                            <div class="flex-1 p-4 rounded-2xl bg-[#4ECDC4]/5 border border-[#4ECDC4]/10">
+                                <h4 class="text-[10px] font-black uppercase tracking-widest text-[#4ECDC4] mb-1">Our Vision</h4>
+                                <p id="vision-text" class="text-[10px] text-[#7F8C8D] leading-relaxed">A community where every stray animal is well-fed and cared for through sustainable innovation.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Fund Stray Section -->
+            <section class="bg-white rounded-3xl p-8 border border-[#EEEEEE] shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
+                <div class="flex items-center gap-6">
+                    <div class="p-6 bg-[#FF6B6B] rounded-[2rem] shadow-lg shadow-[#FF6B6B]/20">
+                        <i data-lucide="heart" class="text-white w-10 h-10"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-[#FF6B6B] mb-2">Fund Stray Feeding</h3>
+                        <p id="fund-stray-message" class="text-[#7F8C8D] text-sm max-w-md leading-relaxed">
+                            Your contribution helps us refill machine hoppers and maintain the network. Scan the QR code to donate and support our local stray cats and dogs.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <div class="p-4 bg-white rounded-3xl border border-[#EEEEEE] shadow-sm flex flex-col items-center gap-2">
+                        <div class="w-32 h-32 bg-[#F8F7FF] rounded-2xl flex items-center justify-center border-2 border-dashed border-[#6A59CC]/20 relative overflow-hidden">
+                            <i data-lucide="qr-code" class="w-12 h-12 text-[#6A59CC] opacity-20"></i>
+                            <span class="absolute bottom-2 text-[8px] font-black uppercase text-[#6A59CC]">Scan to Fund</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-[#7F8C8D]">DONATE QR</span>
+                    </div>
+                    <div class="p-4 bg-white rounded-3xl border border-[#EEEEEE] shadow-sm flex flex-col items-center gap-2">
+                        <div onclick="openGallery()" class="w-32 h-32 bg-[#F8F7FF] rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer relative">
+                            <i data-lucide="image" class="w-12 h-12 text-[#4ECDC4] opacity-20"></i>
+                        </div>
+                        <span class="text-[10px] font-bold text-[#7F8C8D]">GALLERY</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Location Tabs -->
+            <div id="location-tabs" class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                <!-- Tabs injected here -->
+            </div>
+
+            <!-- Stats Grid -->
+            <div id="stats-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Stats injected here -->
+            </div>
+
+            <!-- Map and Machine Info -->
+            <div id="admin-info-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 rounded-3xl border border-[#EEEEEE] shadow-sm overflow-hidden h-[450px] relative bg-gray-100">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+                        <i data-lucide="navigation" class="w-12 h-12 text-[#6A59CC] mb-4 opacity-20"></i>
+                        <h4 class="font-bold mb-2">Live Station Map</h4>
+                        <p class="text-xs text-[#7F8C8D] max-w-xs leading-relaxed">
+                            Station location visualization is currently in demo mode.
+                        </p>
+                    </div>
+                    <div class="absolute top-4 left-4 z-10 backdrop-blur-md p-4 rounded-2xl border border-[#EEEEEE] shadow-xl max-w-[250px] bg-white/90">
+                        <div class="flex items-center gap-2 text-[#6A59CC] mb-1">
+                            <i data-lucide="navigation" class="w-4 h-4"></i>
+                            <h4 class="text-xs font-black uppercase tracking-widest">Station Location</h4>
+                        </div>
+                        <p id="map-location-name" class="text-sm font-bold mb-1">Station</p>
+                        <p id="map-location-address" class="text-[10px] text-[#7F8C8D] font-medium leading-relaxed">Address</p>
+                    </div>
+                </div>
+
+                <div class="space-y-8">
+                    <div class="bg-white rounded-3xl p-6 border border-[#EEEEEE] shadow-sm">
+                        <h3 class="font-extrabold text-lg mb-6 flex items-center gap-2">
+                            <i data-lucide="settings" class="w-5 h-5 text-[#6A59CC]"></i>
+                            Machine Status
+                        </h3>
+                        
+                        <div class="space-y-6">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-end">
+                                    <span class="text-xs font-bold text-[#7F8C8D]">GSM Signal</span>
+                                    <span class="text-xs font-black">Strong</span>
+                                </div>
+                                <div class="h-2 bg-black/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-[#6A59CC] w-[85%]"></div>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-end">
+                                    <span class="text-xs font-bold text-[#7F8C8D]">Dog Food Hopper</span>
+                                    <span class="text-xs font-black">4.2kg / 5kg</span>
+                                </div>
+                                <div class="h-2 bg-black/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-[#4ECDC4] w-[84%]"></div>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-end">
+                                    <span class="text-xs font-bold text-[#7F8C8D]">Cat Food Hopper</span>
+                                    <span class="text-xs font-black">3.8kg / 5kg</span>
+                                </div>
+                                <div class="h-2 bg-black/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-[#FF6B6B] w-[76%]"></div>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-end">
+                                    <span class="text-xs font-bold text-[#7F8C8D]">Battery Level</span>
+                                    <span class="text-xs font-black">92%</span>
+                                </div>
+                                <div class="h-2 bg-black/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-emerald-500 w-[92%]"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#6A59CC] rounded-3xl p-6 text-white shadow-xl shadow-[#6A59CC]/20">
+                        <h3 class="font-extrabold text-lg mb-4">Quick Action</h3>
+                        <p class="text-white/80 text-sm mb-6 leading-relaxed">Test the machine signal manually. Select animal type and coin amount to simulate.</p>
+                        
+                        <div class="space-y-4 mb-6">
+                            <div class="flex gap-2">
+                                <button onclick="setSimType('Dog')" id="sim-dog-btn" class="flex-1 py-2 rounded-xl font-bold text-xs transition-all bg-white text-[#6A59CC]">Dog</button>
+                                <button onclick="setSimType('Cat')" id="sim-cat-btn" class="flex-1 py-2 rounded-xl font-bold text-xs transition-all bg-white/10 text-white">Cat</button>
+                            </div>
+                            
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-white/60 uppercase tracking-widest ml-2">Coin Amount (Pesos)</label>
+                                <input type="number" id="sim-coins" value="1" min="1" class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white outline-none focus:bg-white/20 transition-all">
+                            </div>
+                        </div>
+
+                        <button onclick="simulateDispense()" id="sim-btn" class="w-full bg-white text-[#6A59CC] py-3 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            <span>Insert Coins</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Table -->
+            <div class="bg-white rounded-3xl border border-[#EEEEEE] shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-[#EEEEEE] flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="history" class="text-[#6A59CC] w-5 h-5"></i>
+                        <h3 class="font-extrabold text-lg">Recent Feedings at <span id="table-location-name">Station</span></h3>
+                    </div>
+                    <span id="record-count" class="text-xs font-bold text-[#7F8C8D] bg-[#F8F7FF] px-3 py-1 rounded-full">0 Records</span>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-[#7F8C8D] text-[10px] uppercase tracking-widest font-bold bg-[#F8F7FF]">
+                                <th class="px-6 py-4">Pet Type</th>
+                                <th class="px-6 py-4">Coins</th>
+                                <th class="px-6 py-4">Grams</th>
+                                <th class="px-6 py-4">Time</th>
+                                <th class="px-6 py-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activity-tbody" class="divide-y divide-[#EEEEEE]">
+                            <!-- Rows injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <footer class="max-w-7xl mx-auto p-6 text-center text-[#7F8C8D] text-xs font-bold border-t border-[#EEEEEE] mt-12">
+            PawFeeds DASHBOARD © 2026 • ECE SMART FEEDING NETWORK • POWERED BY GSM SIM7600
+        </footer>
+    </div>
+
+    <!-- Generic Modal Container -->
+    <div id="modal-overlay" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div id="modal-content" class="bg-white w-full max-w-lg p-8 rounded-[2.5rem] shadow-2xl relative modal-enter">
+            <button onclick="closeModal()" class="absolute top-6 right-6 p-2 hover:bg-[#F8F7FF] rounded-full transition-colors">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Gallery Modal -->
+    <div id="gallery-overlay" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl relative overflow-hidden p-8 modal-enter">
+            <button onclick="closeGallery()" class="absolute top-6 right-6 p-2 hover:bg-rose-50 text-rose-500 transition-colors">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <div class="space-y-6">
+                <h3 class="text-2xl font-black text-[#6A59CC]">Community Gallery</h3>
+                <div id="gallery-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-hide">
+                    <!-- Images injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification" class="hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-2 text-white">
+        <i id="notif-icon" data-lucide="check" class="w-4 h-4"></i>
+        <span id="notif-message">Message</span>
+    </div>
+
+    <script>
+        // --- State ---
+        let state = {
+            user: null,
+            authMode: 'viewer', // 'viewer', 'login', 'signup'
+            darkMode: false,
+            selectedLocation: 'Alijis',
+            simulatedType: 'Dog',
+            logs: [
+                { id: '1', location: 'Alijis', type: 'Dog', coins: 5, grams: 10, timestamp: new Date().toISOString() },
+                { id: '2', location: 'Alijis', type: 'Cat', coins: 1, grams: 2, timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
+                { id: '3', location: 'Granada', type: 'Dog', coins: 10, grams: 20, timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString() }
+            ],
+            locations: ['Alijis', 'Granada', 'Mansilingan', 'Sum-ag'],
+            locationDetails: {
+                'Alijis': { address: 'Alijis Road, Bacolod City' },
+                'Granada': { address: 'Granada-Alangilan Road, Bacolod City' },
+                'Mansilingan': { address: 'Mansilingan Main Road, Bacolod City' },
+                'Sum-ag': { address: 'Sum-ag Highway, Bacolod City' }
+            },
+            gallery: [
+                'https://picsum.photos/seed/p1/400/400',
+                'https://picsum.photos/seed/p2/400/400',
+                'https://picsum.photos/seed/p3/400/400',
+                'https://picsum.photos/seed/p4/400/400'
+            ],
+            loginHistory: [
+                { username: 'admin', timestamp: new Date().toISOString() }
+            ]
+        };
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            renderTabs();
+            updateUI();
+        });
+
+        // --- Auth Logic ---
+        function setAuthMode(mode) {
+            state.authMode = mode;
+            const viewerContent = document.getElementById('auth-viewer-content');
+            const authForm = document.getElementById('auth-form');
+            const signupFields = document.getElementById('signup-fields');
+            const authTitle = document.getElementById('auth-title');
+            const authSubmitBtn = document.getElementById('auth-submit-btn');
+            const toggleBtn = document.getElementById('toggle-auth-mode');
+
+            if (mode === 'viewer') {
+                viewerContent.classList.remove('hidden');
+                authForm.classList.add('hidden');
+            } else {
+                viewerContent.classList.add('hidden');
+                authForm.classList.remove('hidden');
+                if (mode === 'signup') {
+                    signupFields.classList.remove('hidden');
+                    authTitle.innerText = 'Admin Sign Up';
+                    authSubmitBtn.innerText = 'Sign Up';
+                    toggleBtn.innerText = 'Login';
+                } else {
+                    signupFields.classList.add('hidden');
+                    authTitle.innerText = 'Admin Login';
+                    authSubmitBtn.innerText = 'Login';
+                    toggleBtn.innerText = 'Sign Up';
+                }
+            }
+        }
+
+        function toggleAuthMode() {
+            setAuthMode(state.authMode === 'login' ? 'signup' : 'login');
+        }
+
+        function enterAsViewer() {
+            state.user = { name: 'Public Viewer', role: 'viewer', username: 'viewer' };
+            completeAuth();
+        }
+
+        function handleAuth(e) {
+            e.preventDefault();
+            const username = document.getElementById('auth-username').value;
+            const name = document.getElementById('auth-name').value || username;
+            
+            state.user = { 
+                name: name, 
+                role: username === 'main' ? 'main' : 'admin', 
+                username: username,
+                bio: 'Smart Feeding Network Administrator'
+            };
+            
+            showNotification(state.authMode === 'login' ? 'Login successful!' : 'Signup successful!');
+            completeAuth();
+        }
+
+        function completeAuth() {
+            document.getElementById('auth-modal').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            document.getElementById('app-content').classList.add('fade-in');
+            
+            // Adjust UI based on role
+            if (state.user.role === 'viewer') {
+                document.getElementById('admin-menu-items').classList.add('hidden');
+                document.getElementById('admin-info-grid').classList.add('hidden');
+                document.getElementById('stats-grid').classList.add('hidden');
+            } else {
+                document.getElementById('admin-menu-items').classList.remove('hidden');
+                document.getElementById('admin-info-grid').classList.remove('hidden');
+                document.getElementById('stats-grid').classList.remove('hidden');
+                if (state.user.role === 'main') {
+                    document.getElementById('requests-btn').classList.remove('hidden');
+                }
+            }
+            
+            updateUI();
+        }
+
+        function signOut() {
+            state.user = null;
+            document.getElementById('app-content').classList.add('hidden');
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('user-menu').classList.add('hidden');
+            setAuthMode('viewer');
+        }
+
+        // --- UI Updates ---
+        function updateUI() {
+            if (!state.user) return;
+
+            // Header
+            document.getElementById('menu-user-name').innerText = state.user.name;
+            document.getElementById('display-user-name').innerText = state.user.name.split(' ')[0];
+            
+            // Map/Info
+            document.getElementById('map-location-name').innerText = state.selectedLocation + ' Station';
+            document.getElementById('map-location-address').innerText = state.locationDetails[state.selectedLocation].address;
+            document.getElementById('table-location-name').innerText = state.selectedLocation;
+
+            renderStats();
+            renderTable();
+        }
+
+        function renderTabs() {
+            const container = document.getElementById('location-tabs');
+            container.innerHTML = state.locations.map(loc => `
+                <button onclick="selectLocation('${loc}')" class="px-6 py-3 rounded-2xl font-bold text-sm transition-all whitespace-nowrap border flex items-center gap-2 ${state.selectedLocation === loc ? 'bg-[#6A59CC] text-white border-[#6A59CC] shadow-lg shadow-[#6A59CC]/20' : 'bg-white text-[#7F8C8D] border-[#EEEEEE] hover:border-[#9D8DF1] hover:text-[#6A59CC]'}">
+                    <i data-lucide="map-pin" class="w-4 h-4"></i>
+                    ${loc}
+                </button>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function selectLocation(loc) {
+            state.selectedLocation = loc;
+            renderTabs();
+            updateUI();
+        }
+
+        function renderStats() {
+            const filtered = state.logs.filter(l => l.location === state.selectedLocation);
+            const dogGrams = filtered.filter(l => l.type === 'Dog').reduce((a, b) => a + b.grams, 0);
+            const catGrams = filtered.filter(l => l.type === 'Cat').reduce((a, b) => a + b.grams, 0);
+            const totalCoins = filtered.reduce((a, b) => a + b.coins, 0);
+            
+            const container = document.getElementById('stats-grid');
+            container.innerHTML = `
+                ${statCard('Total Revenue', '₱' + totalCoins.toFixed(2), filtered.length + ' sessions', 'coins', 'amber')}
+                ${statCard('Total Dispensed', (dogGrams + catGrams) + 'g', 'Total weight', 'weight', 'indigo')}
+                ${statCard('Dog Food', dogGrams + 'g', 'Dispensed to dogs', 'dog', 'teal')}
+                ${statCard('Cat Food', catGrams + 'g', 'Dispensed to cats', 'cat', 'rose')}
+            `;
+            lucide.createIcons();
+        }
+
+        function statCard(title, value, sub, icon, color) {
+            const colors = {
+                amber: 'bg-amber-50 text-amber-600 border-amber-100',
+                indigo: 'bg-[#9D8DF1]/10 text-[#6A59CC] border-[#9D8DF1]/20',
+                teal: 'bg-[#4ECDC4]/10 text-[#4ECDC4] border-[#4ECDC4]/20',
+                rose: 'bg-[#FF6B6B]/10 text-[#FF6B6B] border-[#FF6B6B]/20'
+            };
+            return `
+                <div class="bg-white p-6 rounded-3xl border border-[#EEEEEE] shadow-sm hover:shadow-md transition-all">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-3 rounded-2xl ${colors[color]}">
+                            <i data-lucide="${icon}" class="w-6 h-6"></i>
+                        </div>
+                    </div>
+                    <h4 class="text-[#7F8C8D] text-xs font-bold uppercase tracking-widest mb-1">${title}</h4>
+                    <div class="text-2xl font-black mb-1">${value}</div>
+                    <div class="text-[10px] font-bold text-[#7F8C8D]">${sub}</div>
+                </div>
+            `;
+        }
+
+        function renderTable() {
+            const filtered = state.logs.filter(l => l.location === state.selectedLocation);
+            document.getElementById('record-count').innerText = filtered.length + ' Records';
+            
+            const tbody = document.getElementById('activity-tbody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-20 text-center">
+                            <div class="flex flex-col items-center gap-3 text-[#7F8C8D]">
+                                <i data-lucide="activity" class="w-12 h-12 opacity-20"></i>
+                                <p class="font-bold">No data gathered in ${state.selectedLocation} yet.</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = filtered.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(log => `
+                    <tr class="hover:bg-[#F8F7FF] transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 rounded-xl ${log.type === 'Dog' ? 'bg-[#4ECDC4]/10 text-[#4ECDC4]' : 'bg-[#FF6B6B]/10 text-[#FF6B6B]'}">
+                                    <i data-lucide="${log.type === 'Dog' ? 'dog' : 'cat'}" class="w-4 h-4"></i>
+                                </div>
+                                <span class="font-bold text-sm">${log.type}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4"><span class="font-mono font-bold">₱${log.coins}</span></td>
+                        <td class="px-6 py-4"><span class="font-mono font-bold text-[#6A59CC]">${log.grams}g</span></td>
+                        <td class="px-6 py-4 text-[#7F8C8D] text-xs font-medium">${new Date(log.timestamp).toLocaleTimeString()}</td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                <div class="w-1 h-1 rounded-full bg-emerald-500"></div>
+                                DISPENSED
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+            lucide.createIcons();
+        }
+
+        // --- Interactivity ---
+        function toggleMenu() {
+            const menu = document.getElementById('user-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function toggleDarkMode() {
+            state.darkMode = !state.darkMode;
+            document.body.classList.toggle('bg-[#1A1A1A]');
+            document.body.classList.toggle('text-[#E1E1E1]');
+            
+            // This is a simplified dark mode for demo
+            const icon = document.getElementById('dark-mode-icon');
+            const text = document.getElementById('dark-mode-text');
+            if (state.darkMode) {
+                icon.setAttribute('data-lucide', 'sun');
+                text.innerText = 'Light Mode';
+            } else {
+                icon.setAttribute('data-lucide', 'moon');
+                text.innerText = 'Dark Mode';
+            }
+            lucide.createIcons();
+        }
+
+        function setSimType(type) {
+            state.simulatedType = type;
+            const dogBtn = document.getElementById('sim-dog-btn');
+            const catBtn = document.getElementById('sim-cat-btn');
+            if (type === 'Dog') {
+                dogBtn.className = 'flex-1 py-2 rounded-xl font-bold text-xs transition-all bg-white text-[#6A59CC]';
+                catBtn.className = 'flex-1 py-2 rounded-xl font-bold text-xs transition-all bg-white/10 text-white';
+            } else {
+                dogBtn.className = 'flex-1 py-2 rounded-xl font-bold text-xs transition-all bg-white/10 text-white';
+                catBtn.className = 'flex-1 py-2 rounded-xl font-bold text-xs transition-all bg-white text-[#6A59CC]';
+            }
+        }
+
+        function simulateDispense() {
+            const coins = parseInt(document.getElementById('sim-coins').value) || 1;
+            const btn = document.getElementById('sim-btn');
+            const btnText = btn.querySelector('span');
+            const btnIcon = btn.querySelector('i');
+            
+            btn.disabled = true;
+            btnText.innerText = 'Processing...';
+            btnIcon.classList.add('animate-spin');
+            
+            setTimeout(() => {
+                const newLog = {
+                    id: Date.now().toString(),
+                    location: state.selectedLocation,
+                    type: state.simulatedType,
+                    coins: coins,
+                    grams: coins * 2,
+                    timestamp: new Date().toISOString()
+                };
+                state.logs.push(newLog);
+                
+                btn.disabled = false;
+                btnText.innerText = 'Insert Coins';
+                btnIcon.classList.remove('animate-spin');
+                
+                showNotification(`Simulated ${coins} peso(s) for ${state.simulatedType}s`);
+                updateUI();
+            }, 1000);
+        }
+
+        // --- Modals ---
+        function openModal(type) {
+            const overlay = document.getElementById('modal-overlay');
+            const body = document.getElementById('modal-body');
+            overlay.classList.remove('hidden');
+            document.getElementById('user-menu').classList.add('hidden');
+
+            if (type === 'profile') {
+                body.innerHTML = `
+                    <div class="space-y-6">
+                        <h3 class="text-2xl font-black text-[#6A59CC]">My Profile</h3>
+                        <div class="space-y-4">
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-[#7F8C8D] uppercase tracking-widest ml-2">Full Name</label>
+                                <input type="text" value="${state.user.name}" class="w-full px-6 py-4 rounded-2xl border border-[#EEEEEE] bg-[#F8F7FF] outline-none">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-[#7F8C8D] uppercase tracking-widest ml-2">Bio</label>
+                                <textarea class="w-full px-6 py-4 rounded-2xl border border-[#EEEEEE] bg-[#F8F7FF] outline-none h-24 resize-none">${state.user.bio}</textarea>
+                            </div>
+                            <button onclick="closeModal()" class="w-full py-4 bg-[#6A59CC] text-white rounded-2xl font-bold">Save Changes</button>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'report') {
+                const filtered = state.logs.filter(l => l.location === state.selectedLocation);
+                const total = filtered.reduce((a,b) => a + b.coins, 0);
+                body.innerHTML = `
+                    <div class="space-y-6">
+                        <h3 class="text-2xl font-black text-[#6A59CC]">Revenue Report</h3>
+                        <div class="p-6 rounded-3xl bg-[#F8F7FF] border border-[#EEEEEE]">
+                            <div class="text-center mb-6">
+                                <p class="text-xs font-bold text-[#7F8C8D] uppercase tracking-widest">Daily Summary</p>
+                                <p class="text-lg font-black">${new Date().toLocaleDateString()}</p>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="flex justify-between"><span>Location</span><span class="font-bold">${state.selectedLocation}</span></div>
+                                <div class="flex justify-between"><span>Sessions</span><span class="font-bold">${filtered.length}</span></div>
+                                <hr class="border-dashed">
+                                <div class="flex justify-between pt-2"><span class="text-lg font-black">Total Revenue</span><span class="text-xl font-black text-[#6A59CC]">₱${total.toFixed(2)}</span></div>
+                            </div>
+                        </div>
+                        <button onclick="window.print()" class="w-full py-4 bg-[#4ECDC4] text-white rounded-2xl font-bold">Print Report</button>
+                    </div>
+                `;
+            } else if (type === 'history') {
+                body.innerHTML = `
+                    <div class="space-y-6">
+                        <h3 class="text-2xl font-black text-[#6A59CC]">Login History</h3>
+                        <div class="space-y-3 max-h-96 overflow-y-auto pr-2 scrollbar-hide">
+                            ${state.loginHistory.map(h => `
+                                <div class="p-4 rounded-2xl border border-[#EEEEEE] bg-[#F8F7FF] flex justify-between items-center">
+                                    <div><p class="text-sm font-bold">${h.username}</p><p class="text-[10px] text-[#7F8C8D] font-bold uppercase">Admin Access</p></div>
+                                    <div class="text-right"><p class="text-xs font-bold">${new Date(h.timestamp).toLocaleDateString()}</p></div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'requests') {
+                body.innerHTML = `
+                    <div class="space-y-6">
+                        <h3 class="text-2xl font-black text-[#6A59CC]">Admin Requests</h3>
+                        <div class="p-12 text-center border-2 border-dashed border-[#EEEEEE] rounded-3xl">
+                            <p class="text-[#7F8C8D] font-bold">No pending requests</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+        }
+
+        function openGallery() {
+            const overlay = document.getElementById('gallery-overlay');
+            const grid = document.getElementById('gallery-grid');
+            overlay.classList.remove('hidden');
+            grid.innerHTML = state.gallery.map(img => `
+                <div class="relative aspect-square rounded-2xl overflow-hidden shadow-sm">
+                    <img src="${img}" class="w-full h-full object-cover">
+                </div>
+            `).join('');
+        }
+
+        function closeGallery() {
+            document.getElementById('gallery-overlay').classList.add('hidden');
+        }
+
+        // --- Notifications ---
+        function showNotification(msg, type = 'success') {
+            const notif = document.getElementById('notification');
+            const message = document.getElementById('notif-message');
+            const icon = document.getElementById('notif-icon');
+            
+            message.innerText = msg;
+            notif.className = `fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-2 text-white ${type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`;
+            icon.setAttribute('data-lucide', type === 'success' ? 'check' : 'x');
+            lucide.createIcons();
+            
+            notif.classList.remove('hidden');
+            setTimeout(() => notif.classList.add('hidden'), 3000);
+        }
+    </script>
+</body>
+</html>

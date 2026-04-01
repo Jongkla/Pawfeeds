@@ -1,0 +1,5 @@
+{
+  "name": "Remix: PawFeeds Dashboard",
+  "description": "A smart feeding network dashboard for monitoring stray animal feeding stations in real-time.",
+  "requestFramePermissions": []
+}
